@@ -132,11 +132,8 @@ module Mongrel
     def listener(options={},&block)
       raise "Cannot call listener inside another listener block." if (@listener or @listener_name)
       ops = resolve_defaults(options)
-      ops[:num_processors] ||= 950
-      ops[:throttle] ||= 0
-      ops[:timeout] ||= 60
 
-      @listener = Mongrel::HttpServer.new(ops[:host], ops[:port].to_i, ops[:num_processors].to_i, ops[:throttle].to_i, ops[:timeout].to_i)
+      @listener = Mongrel::HttpServer.new(ops[:host], ops[:port].to_i, ops)
       @listener_name = "#{ops[:host]}:#{ops[:port]}"
       @listeners[@listener_name] = @listener
 

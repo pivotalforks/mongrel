@@ -26,7 +26,7 @@ class WebServerTest < Test::Unit::TestCase
     
     redirect_test_io do
       # We set num_processors=1 so that we can test the reaping code
-      @server = HttpServer.new("127.0.0.1", @port, num_processors=1)
+      @server = HttpServer.new("127.0.0.1", @port, :num_processors => 1)
     end
     
     @tester = TestHandler.new

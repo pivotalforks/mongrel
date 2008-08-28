@@ -28,6 +28,7 @@ require 'mongrel/const'
 require 'mongrel/http_request'
 require 'mongrel/header_out'
 require 'mongrel/http_response'
+require 'mongrel/semaphore'
 
 # Mongrel module containing all of the classes (include C extensions) for running
 # a Mongrel web server.  It contains a minimalist HTTP server with just enough
@@ -87,7 +88,8 @@ module Mongrel
     # The throttle parameter is a sleep timeout (in hundredths of a second) that is placed between 
     # socket.accept calls in order to give the server a cheap throttle time.  It defaults to 0 and
     # actually if it is 0 then the sleep is not done at all.
-    def initialize(host, port, num_processors=950, throttle=0, timeout=60)
+    def initialize(host, port, options = {})
+      options = {:num_processors => 950, :throttle => 0, :timeout => 60}.merge(options)
       
       tries = 0
       @socket = TCPServer.new(host, port) 
@@ -96,9 +98,10 @@ module Mongrel
       @host = host
       @port = port
       @workers = ThreadGroup.new
-      @throttle = throttle / 100.0
-      @num_processors = num_processors
-      @timeout = timeout
+      @throttle = options[:throttle] / 100.0
+      @num_processors = options[:num_processors]
+      @timeout = options[:timeout]
+      @max_concurrent_threads = options[:max_concurrent_threads] || @num_processors
     end
 
     # Does the majority of the IO processing.  It has been written in Ruby using
@@ -257,6 +260,7 @@ module Mongrel
     # Runs the thing.  It returns the thread used so you can "join" it.  You can also
     # access the HttpServer::acceptor attribute to get the thread later.
     def run
+      semaphore = Semaphore.new(@max_concurrent_threads)
       BasicSocket.do_not_reverse_lookup=true
 
       configure_socket_options
@@ -282,7 +286,7 @@ module Mongrel
                 client.close rescue nil
                 reap_dead_workers("max processors")
               else
-                thread = Thread.new(client) {|c| process_client(c) }
+                thread = Thread.new(client) {|c| semaphore.synchronize { process_client(c) } }
                 thread[:started_on] = Time.now
                 @workers.add(thread)
   

@@ -67,15 +67,10 @@ module Mongrel
         else
           begin
             cgi = Mongrel::CGIWrapper.new(request, response)
-            cgi.handler = self
-            # We don't want the output to be really final until we're out of the lock
+            # We don't want the output to be really final until the dispatch returns a response.
             cgi.default_really_final = false
 
-            @guard.synchronize {
-              @active_request_path = request.params[Mongrel::Const::PATH_INFO] 
-              Dispatcher.dispatch(cgi, ActionController::CgiRequest::DEFAULT_SESSION_OPTIONS, response.body)
-              @active_request_path = nil
-            }
+            Dispatcher.dispatch(cgi, ActionController::CgiRequest::DEFAULT_SESSION_OPTIONS, response.body)
 
             # This finalizes the output using the proper HttpResponse way
             cgi.out("text/html",true) {""}
