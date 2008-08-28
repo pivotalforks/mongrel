@@ -1,16 +1,16 @@
 class Semaphore
   def initialize(resource_count = 0)
-    @available_resource_count = resource_count
+    @available_resource_count = resource_count.to_i
     @mutex = Mutex.new
     @waiting_threads = []
   end
   
   def wait
-    make_thread_wait unless resource_is_available
+    sleep_thread unless available_resource?
   end
   
   def signal
-    schedule_waiting_thread if thread_is_waiting
+    schedule_waiting_thread if waiting_thread?
   end
   
   def synchronize
@@ -22,18 +22,18 @@ class Semaphore
   
   private 
   
-  def resource_is_available
+  def available_resource?
     @mutex.synchronize do
       return (@available_resource_count -= 1) >= 0
     end
   end
   
-  def make_thread_wait
+  def sleep_thread
     @waiting_threads << Thread.current
     Thread.stop  
   end
   
-  def thread_is_waiting
+  def waiting_thread?
     @mutex.synchronize do
       return (@available_resource_count += 1) <= 0
     end

@@ -110,6 +110,18 @@ class TestSemaphore < Test::Unit::TestCase
     assert_equal 3, run_count
   end
   
+  def test_semaphore_with_several_available_resources_schedules_several_threads
+    @semaphore = Semaphore.new(4)
+    active = [false, false, false, false]
+    4.times do |i|
+      thread = Thread.new { @semaphore.synchronize { active[i] = true } }
+    end
+    give_up_my_time_slice
+    @semaphore.wait
+    
+    assert active.all?
+  end
+  
   private 
   
   def give_up_my_time_slice
